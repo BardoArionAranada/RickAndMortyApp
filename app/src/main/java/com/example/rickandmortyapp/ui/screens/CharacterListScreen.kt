@@ -1,5 +1,7 @@
 package com.example.rickandmortyapp.ui.screens
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -7,6 +9,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -21,12 +24,19 @@ import coil.compose.AsyncImage
 import com.example.rickandmortyapp.models.CharacterData
 import com.example.rickandmortyapp.models.LocationData
 import com.example.rickandmortyapp.models.OriginData
+import com.example.rickandmortyapp.services.RickAndMortyApiService
 
 @Composable
-fun CharacterListScreen() {
+fun CharacterListScreen(onCharacterClick: (CharacterData) -> Unit) {
     val characters = remember { mutableStateListOf<CharacterData>() }
 
-    // Aquí se omite la llamada a la API para la previsualización
+    // Llama a la API cuando se carga la pantalla
+    LaunchedEffect(Unit) {
+        val response = RickAndMortyApiService.api.getCharacters(1)
+        if (response.isSuccessful) {
+            response.body()?.characters?.let { characters.addAll(it) }
+        }
+    }
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
@@ -34,17 +44,18 @@ fun CharacterListScreen() {
         contentPadding = PaddingValues(8.dp)
     ) {
         items(characters.size) { index ->
-            CharacterCard(character = characters[index])
+            CharacterCard(character = characters[index], onClick = { onCharacterClick(characters[index]) })
         }
     }
 }
 
 @Composable
-fun CharacterCard(character: CharacterData) {
+fun CharacterCard(character: CharacterData, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .padding(8.dp)
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = Color.LightGray)
     ) {
         Column(
@@ -101,15 +112,5 @@ fun PreviewCharacterListScreen() {
             location = LocationData(name = "Earth", url = "")
         )
     )
-    Column(modifier = Modifier.fillMaxSize()) {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(8.dp)
-        ) {
-            items(sampleCharacters.size) { index ->
-                CharacterCard(character = sampleCharacters[index])
-            }
-        }
-    }
+    CharacterListScreen(onCharacterClick = {})
 }
