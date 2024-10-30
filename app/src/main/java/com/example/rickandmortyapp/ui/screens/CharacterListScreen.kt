@@ -5,13 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -29,22 +24,58 @@ import com.example.rickandmortyapp.services.RickAndMortyApiService
 @Composable
 fun CharacterListScreen(onCharacterClick: (CharacterData) -> Unit) {
     val characters = remember { mutableStateListOf<CharacterData>() }
+    var isLoading by remember { mutableStateOf(true) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     // Llama a la API cuando se carga la pantalla
     LaunchedEffect(Unit) {
-        val response = RickAndMortyApiService.api.getCharacters(1)
-        if (response.isSuccessful) {
-            response.body()?.characters?.let { characters.addAll(it) }
+        isLoading = true
+        errorMessage = null
+        try {
+            val response = RickAndMortyApiService.api.getCharacters(1)
+            if (response.isSuccessful) {
+                response.body()?.characters?.let { characters.addAll(it) }
+                isLoading = false
+            } else {
+                errorMessage = "Error al cargar los personajes"
+                isLoading = false
+            }
+        } catch (e: Exception) {
+            errorMessage = "Error de conexión: ${e.message}"
+            isLoading = false
         }
     }
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(8.dp)
-    ) {
-        items(characters.size) { index ->
-            CharacterCard(character = characters[index], onClick = { onCharacterClick(characters[index]) })
+    when {
+        isLoading -> {
+            // Indicador de carga
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        errorMessage != null -> {
+            // Mensaje de error
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Text(text = errorMessage ?: "Unknown error", color = Color.Red)
+            }
+        }
+        else -> {
+            // Pantalla de lista de personajes
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(8.dp)
+            ) {
+                items(characters.size) { index ->
+                    CharacterCard(character = characters[index], onClick = { onCharacterClick(characters[index]) })
+                }
+            }
         }
     }
 }
